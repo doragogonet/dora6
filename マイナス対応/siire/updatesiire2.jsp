@@ -1,0 +1,1209 @@
+<%@ page contentType="text/html;charset=UTF-8"%>
+<%@ taglib prefix="ww" uri="webwork" %>
+<html lang="ja">
+	<head>
+	<ww:include value="'/headContent.jsp'" />
+	<title>仕入（常駐）修正画面</title>
+	<style>
+		.flex{
+			display: flex;
+		}
+		.flex-left{
+			flex-basis: 36rem;
+		}
+		.flex-right{
+			flex-basis: auto;
+		}
+      .table > thead > tr > td {
+        padding: 0.25rem 0 0.25rem 0;
+        vertical-align:top;
+        font-weight: bold;
+      }
+      .table > tbody > tr > td {
+        padding: 0.125rem;
+        vertical-align:top;
+      }
+      .table > tfoot > tr > td {
+        padding: 0.5rem;
+      }
+	</style>
+<script language="JavaScript">
+	function submitAction(pForm,action){
+		pForm.action = action;
+		pForm.submit();	
+	}
+	function deleteMeisaiUpdateSiire(pForm){
+		var len = document.SiireForm.elements.length;
+		var count=0;
+		for (i=0; i<len; i++) {
+			var strName=document.SiireForm.elements[i].name;
+			var lastStr = strName.substr(strName.length-5,strName.length);
+			
+			if (lastStr == "Check"){
+				if (document.SiireForm.elements[i].checked == true){	
+				    count = 1;
+				}
+			}
+		}			
+		if (count == 0){
+			alert("削除したい明細を選択してください。" );
+		}else{
+			if (confirm("削除してよろしいでしょうか？")==true){
+				//sxt 20220630 del start
+				//document.SiireForm.action="deleteMeisaiUpdateSiire.action";
+				//document.SiireForm.submit();
+				//sxt 20220630 del end
+				return true;	//sxt 20220630 add
+			}
+		}
+	}
+	
+	function deleteUpdateSiire(pForm){
+		if (confirm("削除してよろしいでしょうか？")==true){
+			document.SiireForm.action="deleteUpdateSiire2.action";
+			document.SiireForm.submit();
+		}
+	}
+	function deleteUpdateSiireTop(pForm){
+		if (confirm("削除してよろしいでしょうか？")==true){
+			document.SiireForm.action="deleteUpdateSiireTop2.action";
+			document.SiireForm.submit();
+		}
+	}	
+	<!-- sxt 20220721 add start -->
+	function deleteUpdateSiireFromProject(pForm){
+		if (confirm("削除してよろしいでしょうか？")==true){
+			document.SiireForm.action="deleteUpdateSiire2FromProject.action";
+			document.SiireForm.submit();
+		}
+	}
+	<!-- sxt 20220721 add end -->
+	
+	function priceCalAmount(pForm,index){
+	
+		var amount =0;
+		var price =  document.SiireForm.elements['form.stockDetailModelList_update_update['+index +'].price_per'].value;
+		var quantity = document.SiireForm.elements['form.stockDetailModelList_update_update['+index +'].quantity'].value;
+		var fraction_processing = "";
+		if(document.SiireForm.elements['form.fraction_processing_update']!=null){
+			fraction_processing = document.SiireForm.elements['form.fraction_processing_update'].value;
+		}
+		
+		if(price!="" && checkHan(price)==false){
+			return ;
+		}
+		if(quantity!="" && checkMinHan(quantity)==false){
+			return ;
+		}
+		if(price=="" && quantity==""){
+			amount="";
+		}else{					
+			if(checkNumber(price)==true && checkKingaku(quantity)==true){
+				amount = price * quantity;
+				if(fraction_processing!=""){
+					if(fraction_processing =="02"){
+						amount = Math.round(amount);
+					}else if(fraction_processing =="01"){
+						amount = Math.floor(amount);
+					}else if(fraction_processing =="03"){
+						if(amount>Math.floor(amount)){
+							amount = Math.floor(amount)+1 ;
+						}
+					}			
+				}
+			}
+		}
+		document.SiireForm.elements['form.stockDetailModelList_update_update['+index +'].amount'].value = amount;	
+	}
+	
+	function checkNumber(varStr){
+		var data;
+		var ret;
+		for ( var i = 0; i < varStr.length; i++ ) {
+			data = varStr.substr( i, 1 );
+			ret = data.match(/^\d+$/);
+			if ( data != ret ) {
+				return false;
+			}
+		}
+	    return true;
+	}
+
+	function checkKingaku(varStr){
+		
+		var testStr = /(^-\d{0,4}\.\d\d?$)|(^-\d{0,4}$)|(^\d{0,4}\.\d\d?$)|(^\d{0,4}$)/;
+		return  testStr.test(varStr); 
+	}
+	function checkMinHan(varStr){
+				var testStr = /^-([0-9]+).\d\d?$|^([0-9]+).\d\d?$|-([0-9]+)$|([0-9]+)$/;
+				return  testStr.test(varStr); 
+			}	
+	function checkHan(varStr){
+				var testStr = /^([0-9]+)$/;
+				return  testStr.test(varStr); 
+			}					
+</script>		
+</head>
+<body onunload="closeSubWindow();" class="cm-no-transition cm-1-navbar">
+<form name="SiireForm" method="POST" class="form-horizontal">
+<header id="cm-header">
+<!--       <nav class="cm-navbar cm-navbar-primary"> -->
+<!--         <div class="cm-flex"> -->
+<!--           <h1>仕入処理 -->
+<!--             <i class="fa fa-fw fa-angle-double-right"></i>  -->
+<!--           </h1> -->
+<!--         </div> -->
+<%--         <ww:include value="'/header.jsp'"/>	 --%>
+<!--       </nav> -->
+    </header>
+    
+	<!--content-->
+    <div id="global">
+      <div class="container-fluid">
+        <div class="text-center dora-form-title">
+          仕入（常駐）修正画面
+          <ww:include value="'/loginName.jsp'"/>    
+        </div>
+        <div class="panel panel-default">
+          <div class="panel-body">
+            
+            <ww:include value="'/message.jsp'" />
+              
+              <!--button-->              
+              <div class="form-group">
+                <div>			
+					<ww:if test="form.msgId=='top'">
+						<input type="button" class="btn btn-primary dora-sm-button" value="戻る" onclick="submitAction(this.form,'refreshSaveTop.action');"> 
+						<input type="button" class="btn btn-primary dora-sm-button" value="保存" onclick="submitAction(this.form,'saveUpdateSiireTop2.action');"/>
+						<input type="button" class="btn btn-primary dora-sm-button" value="削除" onclick="deleteUpdateSiireTop(this.form);"/>
+					</ww:if>
+					<ww:else>
+						<ww:if test="form.pageId.equals(\"4\")">
+							<input type="button" class="btn btn-primary dora-sm-button" value="戻る" onclick="submitAction(this.form,'showSiireYoteiItiran.action');">
+						</ww:if>
+						<ww:else>
+							<!-- sxt 20220712 del start -->
+<!-- 							<input type="button" class="btn btn-primary dora-sm-button" value="戻る" onclick="submitAction(this.form,'refreshSiire.action');"> -->
+							<!-- sxt 20220712 del end -->
+							<!-- sxt 20220712 add start -->
+							<ww:if test="form.modoruFlg.equals(\"1\")">
+							    <input type="button" class="btn btn-primary dora-sm-button" value="戻る" onclick="hrefAction('returnProjectDetail.action')">
+							</ww:if>
+							<ww:else> 
+							    <input type="button" class="btn btn-primary dora-sm-button" value="戻る" onclick="submitAction(this.form,'refreshSiire.action');">
+							</ww:else>
+							<!-- sxt 20220712 add end -->
+						</ww:else> 
+						<!-- sxt 20220721 del start -->
+<!-- 						<input type="button" class="btn btn-primary dora-sm-button" value="保存" onclick="submitAction(this.form,'saveUpdateSiire2.action');"/> -->
+<!-- 						<input type="button" class="btn btn-primary dora-sm-button" value="削除" onclick="deleteUpdateSiire(this.form);"/> -->
+						<!-- sxt 20220721 del end -->
+						<!-- sxt 20220721 add start -->
+						<ww:if test="form.modoruFlg.equals(\"1\")">
+						    <input type="button" class="btn btn-primary dora-sm-button" value="保存" onclick="submitAction(this.form,'saveUpdateSiire2FromProject.action');"/>
+							<input type="button" class="btn btn-primary dora-sm-button" value="削除" onclick="deleteUpdateSiireFromProject(this.form);"/>
+						</ww:if>
+						<ww:else> 
+						    <input type="button" class="btn btn-primary dora-sm-button" value="保存" onclick="submitAction(this.form,'saveUpdateSiire2.action');"/>
+							<input type="button" class="btn btn-primary dora-sm-button" value="削除" onclick="deleteUpdateSiire(this.form);"/>
+						</ww:else>
+						<!-- sxt 20220721 add end -->
+					</ww:else>
+                </div>
+              </div>
+              
+              <!--状態区域-->
+                <div class="panel-body" style="padding:1.75rem 1rem">
+                  <div class="dora-state-zone">月次締(<ww:property value ="form.month_close_Name_update" />)</div>
+                  <div class="dora-state-zone">支払(未)</div>
+                  
+                  <div class="dora-state-zone form-inline">
+                  	<label class="dora-label-right">仕入担当者</label>
+                    <ww:select name="'form.stock_in_code_update'"
+			              size="'1'" 
+					      cssClass="'form-control'" 
+					      list="form.stock_in_namelist_ForSel" 
+					      listKey="person_in_charge_code" 
+					      listValue="person_in_charge_name" 
+					      value="form.stock_in_code_update"  >
+			   		</ww:select>
+                  </div>
+                  
+                </div>
+
+              <!--参照区域-->
+              <div style="padding-top:1rem;">
+                <ul id="myTab" class="nav nav-tabs" role="tablist">
+                  <li role="presentation" class="active"><a href="#home" id="home-tab" role="tab" data-toggle="tab" aria-controls="home" aria-expanded="true">発注参照</a></li>
+                </ul>
+
+                <div class="panel panel-default">
+                  <div id="myTabContent" class="tab-content">
+                    <div role="tabpanel" class="tab-pane fade active in panel-body" id="home" aria-labelledby="home-tab">
+                      <div class="form-group form-inline">
+                        <label class="dora-label-left">発注番号</label>
+                        <label class="dora-label-normal btn-link" onclick="linkAction('showHattyuItiran2.action?form.order_no_itiran=<ww:property  value="form.order_no_update" />&form.page_flg=7','');"><ww:property  value="form.order_no_update" /></label>
+                        <label class="dora-label-right">発注日付</label>
+                        <label class="dora-label-normal"><ww:property value="form.order_date_update" /></label>
+                      </div>
+
+                      <div class="form-group form-inline">
+                        <label class="dora-label-left">得意先 </label>
+                        <label class="dora-label-normal"><ww:property  value="form.customer_code_update" />　<ww:property value="form.customer_name_update" /></label>
+                        <ww:hidden name ="'form.fraction_processing_update'" />		
+                      </div>
+
+                      <div class="form-group form-inline">
+                        <label class="dora-label-left">件名 </label>
+                        <label class="dora-label-normal"><ww:property  value="form.stock_name1_hachu" />　<ww:property  value="form.stock_name2_hachu" /></label>
+                      </div>
+
+                      <div class="form-group form-inline">
+                        <label class="dora-label-left">外注先 </label>
+                        <label class="dora-label-normal"><ww:property value="form.out_order_code_update" />　<ww:property value="form.out_order_name_update" /></label>
+                      </div>
+
+                    </div>
+                  </div>
+                </div>               
+              </div>
+
+              <!--ヘッダー-->
+              <div>
+                <ul id="myTab" class="nav nav-tabs" role="tablist">
+                  <li role="presentation" class="active"><a href="#header" id="header-tab" role="tab" data-toggle="tab" aria-controls="header" aria-expanded="true">仕入ヘッダー</a></li>                     
+                </ul>
+                <div class="panel panel-default">
+                  <div id="myTabContent" class="tab-content">
+                    <div role="tabpanel" class="tab-pane fade active in panel-body" id="header" aria-labelledby="header-tab">
+                      <div class="form-group form-inline">
+                        <label class="dora-label-left">仕入番号</label>
+                        <ww:property value="form.stock_no_update" />
+                        <label class="dora-label-right-require">仕入日付</label>
+                        <input type="date" name="form.stock_date_update"  value="<ww:property value='form.stock_date_update'/>" class="form-control">
+                        <label class="dora-label-right">外注請求番号</label>
+                        <input type="text" name="form.out_order_no_update" value="<ww:property value='form.out_order_no_update'/>" maxlength="20" class="form-control" placeholder="外注請求番号">
+                      </div>
+                      
+                      <div class="form-group form-inline">
+                        <label class="dora-label-left-require">件名</label>
+                        <input type="text" name="form.stock_name1_update" value="<ww:property value='form.stock_name1_update'/>" maxlength="60" class="form-control" style="width:40rem;" placeholder="件名１">
+                        <input type="text" name="form.stock_name2_update" value="<ww:property value='form.stock_name2_update'/>" maxlength="60" class="form-control" style="width:40rem;" placeholder="件名２">
+                      </div>
+
+                      <div class="form-group form-inline">
+                        <label class="dora-label-left-require">作業期間</label>
+                        <input type="date" name="form.work_start_date_update" value="<ww:property value='form.work_start_date_update'/>" class="form-control">
+                        <label>～</label>  
+                        <input type="date" name="form.work_end_date_update" value="<ww:property value='form.work_end_date_update'/>" class="form-control">
+                       
+                      </div>
+
+                      <div class="form-group form-inline">
+                        <label class="dora-label-left">納品状況</label>
+						<ww:select name="'form.delivery_status_input_update'" 
+								   cssStyle="'width:16rem'" 
+                                   cssClass="'form-control'"
+								   list="form.delivery_status_update" 
+								   listKey="code_id" 
+								   listValue="code_value" 
+								   value="form.delivery_status_input_update" 
+								   
+						>
+						</ww:select>
+
+                        <label class="dora-label-right">支払予定日</label>
+                        <input type="date" name="form.payment_date_update" value="<ww:property value='form.payment_date_update'/>" class="form-control">
+                        <label class="dora-label-right-require">消費税率(%)</label>
+                        <input type="number" name="form.consume_tax_rate_update" value="<ww:property value='form.consume_tax_rate_update'/>" class="form-control" style="width: 8rem;" placeholder="税率(%)"  
+                        		oninput="maxNumberLength(2)" onKeypress="return integerOnly()"/>
+                      </div>
+
+                    </div>
+                    
+                    <!-- sxt 20220923 add start -->
+	                <div class="form-group flex" style="padding-top:1rem;">
+						<div class="flex-left" style="padding-left:0.625rem;">
+							<label for="estimate_date">精算方法</label>
+							<ww:if test="form.payment_method.equals(\"1\")">
+								<ww:checkbox name="'form.payment_method_chk'" fieldValue="form.payment_method" value="1"></ww:checkbox>
+							</ww:if>
+							<ww:else>
+								<ww:checkbox name="'form.payment_method_chk'" fieldValue="form.payment_method" value="0"></ww:checkbox>
+							</ww:else>
+							<table class="table table-bordered" id="payment_method1">
+								<tr>
+									<td colspan="3" class="text-center">月間作業基準時間（H）</td>
+								</tr>
+								<tr>
+									<td class=" text-right" style="border-right-width:0px;">
+										<input type="text" class="form-control" value="<ww:property value='form.work_time_from'/>"
+												style="width:6rem;display:inline;background-color:#fff" readonly>
+												
+									</td>
+									<td class="text-center"
+										style="vertical-align:middle;border-left-width: 0px;border-right-width:0px;">
+										～</td>
+									<td style="border-left-width:0px;">
+										<input type="text" class="form-control text-right" value="<ww:property value='form.work_time_to'/>"
+											style="width:6rem;display:inline;background-color:#fff" readonly>
+									</td>
+								</tr>
+	
+							</table>
+						</div>
+						<div class="flex-right" style="padding-left:2rem;">
+							<label for="estimate_date">　</label>
+							<table class="table table-bordered" id="payment_method2">
+								<tbody>
+									<tr>
+										<!-- sxt 20221031 del start -->
+<!-- 										<td colspan="2" -->
+<!-- 											style="width: 15rem;vertical-align:middle;">　</td> -->
+										<!-- sxt 20221031 del end -->
+										<!-- sxt 20221031 add start -->
+										<td class="text-center"
+											style="width: 15rem;vertical-align:middle;">精算単位
+										</td>
+										<td>
+											<input type="text" class="form-control" value="<ww:property value='form.time_unit'/>"
+												style="background-color:#fff" readonly>
+										</td>
+										<!-- sxt 20221031 add end -->
+									</tr>
+									<tr>
+										<td class="text-center" style="border-bottom:0;">
+											<div class="checkbox">
+												<label>
+													超過時間精算：
+												</label>
+											</div>
+										</td>
+										<td style="border-bottom:0;padding: 0.5rem 0.5rem 0 0.5rem;">
+											<input type="text" id="work_time_to1" class="form-control text-right"  value="<ww:property value='form.work_time_to'/>" 
+												style="height:1rem;width:6rem;display:inline;background-color:#fff" readonly>
+											時間を超えた時間数を超過時間とする。
+										</td>
+									</tr>
+									<tr>
+										<td style="border-top:0;border-bottom:0;"></td>
+										<td style="border:0;padding: 0 0.5rem 0.75rem 0.5rem;">
+											超過単価：月額単価<span
+												style="font:1rem Verdana,Arial,Tahoma;"> ÷ </span>
+											<input type="text" id="work_time_to2" class="form-control text-right"  value="<ww:property value='form.work_time_to'/>" 
+												style="height:1rem;width:6rem;display:inline;background-color:#fff" readonly>
+											時間
+										</td>
+									</tr>
+									<tr>
+										<td style="border-top:0;border-bottom:0;"></td>
+										<td style="border:0;padding: 0 0.5rem 0.5rem 0.5rem;">
+											精算方式：超過単価<span
+												style="font:1rem Verdana,Arial,Tahoma;"> ×
+											</span>超過時間
+										</td>
+									</tr>
+									
+									<tr>
+										<td class="text-center" style="border-bottom:0;">
+											<div class="checkbox">
+												<label>
+													控除時間精算：
+												</label>
+											</div>
+										</td>
+										<td style="border-bottom:0;padding: 0.5rem 0.5rem 0 0.5rem;">
+											<input type="text" id="work_time_from1" class="form-control text-right" value="<ww:property value='form.work_time_from'/>"
+												style="height:1rem;width:6rem;display:inline;background-color:#fff" readonly>
+											時間に満たない時間数を控除時間とする。
+										</td>
+									</tr>
+									<tr>
+										<td style="border-top:0;border-bottom:0;"></td>
+										<td style="border:0;padding: 0 0.5rem 0.75rem 0.5rem;">
+											控除単価：月額単価<span
+												style="font:1rem Verdana,Arial,Tahoma;"> ÷ </span>
+											<input type="text" id="work_time_from2" class="form-control text-right" value="<ww:property value='form.work_time_from'/>"
+												style="height:1rem;width:6rem;display:inline;background-color:#fff" readonly>
+											時間
+										</td>
+									</tr>
+									<tr>
+										<td style="border-top:0;border-bottom:0;"></td>
+										<td style="border:0;padding: 0 0.5rem 0.5rem 0.5rem;">
+											精算方式：控除単価<span
+												style="font:1rem Verdana,Arial,Tahoma;"> ×
+											</span>控除時間
+										</td>
+									</tr>
+									
+								</tbody>
+							</table>
+						</div>
+					</div>
+	                <!-- sxt 20220923 add end -->
+		                
+                  </div>
+                </div>
+     
+              </div>
+
+			  <!--明細-->
+              <div>
+                <ul id="myTab" class="nav nav-tabs" role="tablist">
+                  <li role="presentation" class="active"><a href="#detail" id="detail-tab" role="tab" data-toggle="tab" aria-controls="detail" aria-expanded="true">仕入明細</a></li>
+                </ul>
+
+                <div class="panel panel-default">
+                  <div id="myTabContent" class="tab-content">
+                    <div role="tabpanel" class="tab-pane fade active in panel-body" id="detail" aria-labelledby="detail-tab">
+                      <table class="table table-bordered">
+                        <thead>
+                          <tr>
+							<td class="text-center" style="width:4.5rem;" rowspan="2">行</td>
+							<td class="text-center" style="width:40rem;" rowspan="2">内容</td>
+							<td class="text-center" style="width:8rem;" rowspan="2"></td>
+							<td class="text-center" style="width:15rem;" rowspan="2">単価（円）</td>
+							<td class="text-center" style="width:15rem;" rowspan="2">稼働時間（H）</td>
+							<!-- sxt 20221003 add start -->
+							<td class="text-center" style="width:15rem;" rowspan="2">超過単価（円）</td>
+							<td class="text-center" style="width:15rem;" rowspan="2">控除単価（円）</td>
+							<!-- sxt 20221003 add end -->
+							<td class="text-center" style="width:15rem;" rowspan="2">精算額（円）</td>
+<!-- 							<td class="text-center" style="width:10rem;" rowspan="2">そのた（円）</td> -->	<!-- sxt 20221024 del -->
+							<td class="text-center" style="width:15rem;" rowspan="2">金額（円）</td>
+							<td class="text-center" style="width:15rem;" rowspan="2">旅費（円）</td>
+							<td class="text-center" style="width:45rem;" rowspan="2">備考</td>
+							<ww:hidden name="'detailsize'" id="detailsize" value="form.stockDetailModelList_update.size()"></ww:hidden>
+                          </tr>
+                        </thead>
+                        <tbody id="tbAddPart">
+                        <%int s = 0; %>
+                        <ww:iterator value="form.stockDetailModelList_update" status="rows">
+                          <tr>
+                            <td class="text-center" rowspan="2" style="width:4.25rem;" nowrap>
+                              <input type="number" name="form.stockDetailModelList_update[<ww:property value='#rows.index'/>].row_number" 
+									value='<ww:property value="form.stockDetailModelList_update[#rows.index].row_number"/>' class="form-control text-right"
+									oninput="maxNumberLength(2)" onKeypress="return integerOnly()"/>
+                            </td>
+                            <td class="text-center" style="border-bottom: none;">
+	                            <div class="flex">
+	                            	<ww:hidden name="'form.stockDetailModelList_update['+#rows.index+'].task_code'" value="form.stockDetailModelList_update[#rows.index].task_code" />
+	                            	<!-- sxt 20221003 del start -->
+<%-- 	                            	<ww:hidden name="'form.stockDetailModelList_update['+#rows.index+'].more_price'" value="form.stockDetailModelList_update[#rows.index].more_price" /> --%>
+<%-- 	                            	<ww:hidden name="'form.stockDetailModelList_update['+#rows.index+'].less_price'" value="form.stockDetailModelList_update[#rows.index].less_price" /> --%>
+	                            	<!-- sxt 20221003 del end -->
+                              		<input type="text" name="form.stockDetailModelList_update[<ww:property value='#rows.index'/>].task_content" 
+										value='<ww:property value="form.stockDetailModelList_update[#rows.index].task_content"/>' class="form-control" />
+									<input type="button" value="参照" class="btn btn-primary dora-tabel-button" 
+										onclick="openWindowWithScrollbarGuide('initialSagyousyaGuide.action?form.fieldName_code=form.stockDetailModelList_update[<%=s%>].task_code&form.fieldName_name=form.stockDetailModelList_update[<%=s%>].task_content&form.company_name=form.stockDetailModelList_update[<%=s%>].company_name&form.sagyousya_flg=2','技術者参照',670,716)">		
+	                            </div>
+                            </td>
+                            <td rowspan="2" class="text-center" style="width:6.75rem;" nowrap>
+								<ww:select name="'form.stockDetailModelList_update['+#rows.index+'].time_kbn'"
+									       cssClass="'form-control'" 
+									       list="form.timeKbnList" 
+									       listKey="code_id" 
+									       listValue="code_value" 
+									       value="time_kbn"
+									       headerKey="''"
+								       	   headerValue="''">
+							    </ww:select>
+                            </td>
+                            
+                            <!-- sxt 20221024 add start -->
+							<ww:if test="time_kbn.equals('')">
+								<td rowspan="2">
+	                              <input type="number" name="form.stockDetailModelList_update[<ww:property value='#rows.index'/>].price_per" 
+										value="<ww:property value='form.stockDetailModelList_update[#rows.index].price_per'/>" class="form-control text-right"
+										readonly style="background-color:#fff" />
+	                            </td>
+								<td class="text-center" rowspan="2">
+									<input type="number" name="form.stockDetailModelList_update[<ww:property value='#rows.index'/>].quantity" 
+										value="<ww:property value='form.stockDetailModelList_update[#rows.index].quantity'/>" class="form-control text-right"
+										readonly style="background-color:#fff" />
+								</td>
+							</ww:if>
+							<ww:else>
+							<!-- sxt 20221024 add end -->
+								<td rowspan="2">
+	                              <input type="number" name="form.stockDetailModelList_update[<ww:property value='#rows.index'/>].price_per" 
+										value="<ww:property value='form.stockDetailModelList_update[#rows.index].price_per'/>" class="form-control text-right"
+										oninput="maxNumberLength(8)" onKeypress="return integerOnly()"/>
+	                            </td>
+								<td class="text-center" rowspan="2">
+									<input type="number" name="form.stockDetailModelList_update[<ww:property value='#rows.index'/>].quantity" 
+										value="<ww:property value='form.stockDetailModelList_update[#rows.index].quantity'/>" class="form-control text-right"
+										oninput="maxNumberLength(8)" --onkeypress="return integerAndDecimal()" onchange="decimalLength(8,3)"/>
+								</td>
+							</ww:else>	<!-- sxt 20221024 add -->                   
+							
+							<!-- sxt 20221003 add start -->
+							<ww:if test="time_kbn.equals('01')">
+								<td rowspan="2">
+	                              <input type="number" name="form.stockDetailModelList_update[<ww:property value='#rows.index'/>].more_price" 
+										value="<ww:property value='form.stockDetailModelList_update[#rows.index].more_price'/>" class="form-control text-right"
+										oninput="maxNumberLength(8)" onKeypress="return integerOnly()"/>
+	                            </td>
+                            </ww:if>
+							<ww:else>
+								<td rowspan="2">
+	                              <input type="number" name="form.stockDetailModelList_update[<ww:property value='#rows.index'/>].more_price" 
+										value="<ww:property value='form.stockDetailModelList_update[#rows.index].more_price'/>" class="form-control text-right"
+										readonly style="background-color:#fff"  />
+	                            </td>
+                            </ww:else>
+                            
+                            <ww:if test="time_kbn.equals('01')">
+                            	<td rowspan="2">
+	                              <input type="number" name="form.stockDetailModelList_update[<ww:property value='#rows.index'/>].less_price" 
+										value="<ww:property value='form.stockDetailModelList_update[#rows.index].less_price'/>" class="form-control text-right"
+										oninput="maxNumberLength(8)" onKeypress="return integerOnly()"/>
+	                            </td>
+							</ww:if>
+							<ww:else>
+								<td rowspan="2">
+	                              <input type="number" name="form.stockDetailModelList_update[<ww:property value='#rows.index'/>].less_price" 
+										value="<ww:property value='form.stockDetailModelList_update[#rows.index].less_price'/>" class="form-control text-right"
+										readonly style="background-color:#fff" />
+	                            </td>
+							</ww:else>
+                            <!-- sxt 20221003 add end -->
+
+							<ww:if test="time_kbn.equals('01')">
+								<td class="text-center" rowspan="2">
+									<input type="number" name="form.stockDetailModelList_update[<ww:property value='#rows.index'/>].calculate_amount" 
+										value="<ww:property value='form.stockDetailModelList_update[#rows.index].calculate_amount'/>" class="form-control text-right"
+										oninput="maxNumberLength(8)" onKeypress="return integerOnly()"/>
+								</td>
+							</ww:if>
+							<ww:else>
+								<td class="text-center" rowspan="2">
+									<input type="number" name="form.stockDetailModelList_update[<ww:property value='#rows.index'/>].calculate_amount" 
+										value="<ww:property value='form.stockDetailModelList_update[#rows.index].calculate_amount'/>" class="form-control text-right"
+										readonly style="background-color:#fff" />
+								</td>
+							</ww:else>
+							<!-- sxt 20221024 del start -->							
+<!--                             <td rowspan="2"> -->
+<%--                               <input type="number" name="form.stockDetailModelList_update[<ww:property value='#rows.index'/>].other_price"  --%>
+<%-- 									value="<ww:property value='form.stockDetailModelList_update[#rows.index].other_price'/>" class="form-control text-right" --%>
+<!-- 									oninput="maxNumberLength(8)" onKeypress="return integerOnly()"/> -->
+<!--                             </td> -->
+                            <!-- sxt 20221024 del end -->
+            
+                            <td rowspan="2">
+                            	<!-- sxt 20221024 add start -->
+                            	<input type="hidden" name="form.stockDetailModelList_update[<ww:property value='#rows.index'/>].other_price" 
+									value="<ww:property value='form.stockDetailModelList_update[#rows.index].other_price'/>"/>
+                            	<!-- sxt 20221024 add end -->
+                              <input type="number" name="form.stockDetailModelList_update[<ww:property value='#rows.index'/>].amount" 
+										value="<ww:property value='form.stockDetailModelList_update[#rows.index].amount'/>" class="form-control text-right"
+										readonly style="background-color:#fff" />
+                            </td>
+                            <td rowspan="2">
+                            	<!-- sxt 20221024 add start -->
+								<ww:if test="time_kbn.equals('')">
+									<input type="number" name="form.stockDetailModelList_update[<ww:property value='#rows.index'/>].carfare" 
+											value="<ww:property value='form.stockDetailModelList_update[#rows.index].carfare'/>" class="form-control text-right"
+											readonly style="background-color:#fff"/>
+								</ww:if>
+								<ww:else>
+								<!-- sxt 20221024 add end -->
+									<input type="number" name="form.stockDetailModelList_update[<ww:property value='#rows.index'/>].carfare" 
+											value="<ww:property value='form.stockDetailModelList_update[#rows.index].carfare'/>" class="form-control text-right"
+											oninput="maxNumberLength(8)" onKeypress="return integerOnly()"/> 
+								</ww:else>	<!-- sxt 20221024 add -->
+                            </td>
+                            <td class="text-center" rowspan="2">
+								<ww:textarea name="'form.stockDetailModelList_update['+#rows.index+'].biko'" value="biko" cssClass="'form-control'" cssStyle="'height:4.5em'"></ww:textarea>
+							</td>
+                          </tr>
+                          <tr>
+                            <td style="border-top: none;">
+								<input type=text disabled name="form.stockDetailModelList_update[<ww:property value='#rows.index'/>].company_name" 
+									value="<ww:property value='form.stockDetailModelList_update[#rows.index].company_name'/>" style="background-color: #ffffff;" />	 
+							</td>
+                          </tr>
+                          <%  s++; %>
+                          </ww:iterator>
+                        </tbody>
+                        
+                        <tfoot>
+							<tr>
+								<td colspan="6" nowrap rowspan="4"></td>
+								<td class="text-center" nowrap colspan="2">課税対象額計</td>
+								<td class="text-right" nowrap>
+									<label id="stock_quantity_sum"><ww:property value='form.stock_quantity_sum'/></label>
+								</td>
+							</tr>
+							<tr>
+								<td class="text-center" nowrap colspan="2">消費税</td>
+								<td class="text-right" nowrap>
+									<label id="stock_consume_tax_sum"><ww:property value='form.stock_consume_tax_sum'/></label>
+								</td>
+							</tr>
+							<tr>
+								<td class="text-center" nowrap colspan="2">交通費など</td>
+								<td class="text-right" nowrap>
+									<label id="carfare"><ww:property value='form.carfare'/></label>
+								</td>
+							</tr>
+							<tr>
+								<td class="text-center" nowrap colspan="2">合計額</td>
+								<td class="text-right" nowrap>
+									<label id="stock_quantity_tax_sum"><ww:property value='form.stock_quantity_tax_sum'/></label>
+								</td>
+							</tr>
+						</tfoot>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!---->
+              <div class="row" style="margin:1rem 0 0 0.25rem">
+                <div>
+                  <label for="state">備考（最大長度１２５０漢字）</label>
+                  <textarea name="form.remark_update" class="form-control" rows="5" placeholder="備考"><ww:property value='form.remark_update'/></textarea>
+                </div>
+              </div>
+  
+              <div class="form-group"  style="margin-top:1.25rem">
+				<div>			
+					<ww:if test="form.msgId=='top'">
+						<input type="button" class="btn btn-primary dora-sm-button" value="戻る" onclick="submitAction(this.form,'refreshSaveTop.action');"> 
+						<input type="button" class="btn btn-primary dora-sm-button" value="保存" onclick="submitAction(this.form,'saveUpdateSiireTop2.action');"/>
+						<input type="button" class="btn btn-primary dora-sm-button" value="削除" onclick="deleteUpdateSiireTop(this.form);"/>
+					</ww:if>
+					<ww:else>
+						<ww:if test="form.pageId.equals(\"4\")">
+							<input type="button" class="btn btn-primary dora-sm-button" value="戻る" onclick="submitAction(this.form,'showSiireYoteiItiran.action');">
+						</ww:if>
+						<ww:else>
+							<!-- sxt 20220712 del start -->
+<!-- 							<input type="button" class="btn btn-primary dora-sm-button" value="戻る" onclick="submitAction(this.form,'refreshSiire.action');"> -->
+							<!-- sxt 20220712 del end -->
+							<!-- sxt 20220712 add start -->
+							<ww:if test="form.modoruFlg.equals(\"1\")">
+							    <input type="button" class="btn btn-primary dora-sm-button" value="戻る" onclick="hrefAction('returnProjectDetail.action')">
+							</ww:if>
+							<ww:else> 
+							    <input type="button" class="btn btn-primary dora-sm-button" value="戻る" onclick="submitAction(this.form,'refreshSiire.action');">
+							</ww:else>
+							<!-- sxt 20220712 add end -->
+						</ww:else> 
+						<!-- sxt 20220721 del start -->
+<!-- 						<input type="button" class="btn btn-primary dora-sm-button" value="保存" onclick="submitAction(this.form,'saveUpdateSiire2.action');"/> -->
+<!-- 						<input type="button" class="btn btn-primary dora-sm-button" value="削除" onclick="deleteUpdateSiire(this.form);"/> -->
+						<!-- sxt 20220721 del end -->
+						<!-- sxt 20220721 add start -->
+						<ww:if test="form.modoruFlg.equals(\"1\")">
+						    <input type="button" class="btn btn-primary dora-sm-button" value="保存" onclick="submitAction(this.form,'saveUpdateSiire2FromProject.action');"/>
+							<input type="button" class="btn btn-primary dora-sm-button" value="削除" onclick="deleteUpdateSiireFromProject(this.form);"/>
+						</ww:if>
+						<ww:else> 
+						    <input type="button" class="btn btn-primary dora-sm-button" value="保存" onclick="submitAction(this.form,'saveUpdateSiire2.action');"/>
+							<input type="button" class="btn btn-primary dora-sm-button" value="削除" onclick="deleteUpdateSiire(this.form);"/>
+						</ww:else>
+						<!-- sxt 20220721 add end -->
+					</ww:else>
+                </div>
+              </div>
+          </div>
+        </div>
+      </div>
+        <ww:hidden name="'form.work_time_from'" value="form.work_time_from"></ww:hidden>
+		<ww:hidden name="'form.work_time_to'" value="form.work_time_to"></ww:hidden>
+		<ww:hidden name="'form.shurui'"> </ww:hidden>
+		<ww:hidden name="'form.payment_method'" > </ww:hidden><!-- sxt 20220923 add -->
+      <ww:include value="'/footer.jsp'" />
+    </div>
+</form>
+</body>
+<ww:include value="'/footerJs.jsp'" />
+<script language="JavaScript">
+		$(document).ready(function(){
+			
+			//sxt 20220923 add start#
+			/* 精算方法*/
+			var payment_method = $("input[name='form.payment_method']").val();		
+			if (payment_method == '1'){
+				$("#payment_method1").show();
+				$("#payment_method2").show();
+			} else {
+				$("#payment_method1").hide();
+				$("#payment_method2").hide();
+			}
+			//sxt 20220923 add end
+			
+			//合計金額計算
+			calculateTotal();
+			
+			/* 内容blurイベント*/
+			$("input[name$='task_content']").blur(function(){
+				
+				//获取当前元素的name
+				var x = $(this).prop("name");
+				
+				if (!$(this).val()){
+					//获取索引值
+					var index = getCurIndex(x);
+					
+	 				//技術者コードをクリアする
+	 				$("input[name='form.stockDetailModelList_update[" + index +"].task_code'").val("");
+	 				
+	 				//会社名をクリアする
+	 				$("input[name='form.stockDetailModelList_update[" + index +"].company_name'").val("");
+				}
+			});
+			
+			/* 明細部人月時間区分changeイベント*/
+			$("select[name$='time_kbn']").change(function(){
+				//获取当前元素的name
+				var x = $(this).prop("name");
+				
+				//获取索引值
+				var index = getCurIndex(x);
+				
+				//sxt 20221025 add start
+				//空白を選択する時
+				if ($("select[name='form.stockDetailModelList_update[" + index +"].time_kbn'").val() == ""){	
+					
+					//単価,超過単価,控除単価,工数を入力不可
+					setItemState(true,index);
+					
+				} else {
+
+					//単価,超過単価,控除単価,工数を入力可能
+					setItemState(false,index);
+					//sxt 20221025 add end
+				
+					//精算額をセットする
+					setPriceAttr(index);
+					
+					//精算額を計算
+					setCalculateAmount(index);
+					
+					//金額計算
+					setAmount(index);
+				
+				}	//sxt 20221025 add 
+
+			});
+			
+			//sxt 20220928 add start
+			/* 契約単価blurイベント*/
+			$("input[name$='price_per']").blur(function(){
+				//获取当前元素的name
+				var x = $(this).prop("name");
+				
+				//获取索引值
+				var index = getCurIndex(x);
+				
+				//金額計算
+				setAmount(index);
+					
+			});
+			//sxt 20220928 add end
+			
+			/* 明細部稼働時間blurイベント*/
+			$("input[name$='quantity']").blur(function(){
+
+				//获取当前元素的name
+				var x = $(this).prop("name");
+
+				//获取索引值
+				var index = getCurIndex(x);
+				
+				//精算額を計算
+				setCalculateAmount(index);
+				
+				//金額計算
+				setAmount(index);
+								
+			});
+			
+			/* 明細部精算額blurイベント*/
+			$("input[name$='calculate_amount']").blur(function(){
+			
+				//获取当前元素的name
+				var x = $(this).prop("name");
+				
+				//获取索引值
+				var index = getCurIndex(x);
+
+				//金額計算
+				setAmount(index);
+			});
+			
+			/* 明細部その他blurイベント*/
+			$("input[name$='other_price']").blur(function(){
+			
+				//获取当前元素的name
+				var x = $(this).prop("name");
+				
+				//获取索引值
+				var index = getCurIndex(x);
+				
+				//金額計算
+				setAmount(index);
+				
+			});
+			
+			/* 明細部交通費blurイベント*/
+			$("input[name$='carfare']").blur(function(){
+			
+				//合計金額計算
+				calculateTotal();
+			});
+			
+			//sxt 20220923 add start
+			/* 精算方法changeイベント*/
+			$("input[name='form.payment_method_chk']").change(function(){
+				if ($("input[name='form.payment_method_chk']").is(':checked')){
+					$("input[name='form.payment_method']").val("1");
+					$("#payment_method1").show();
+					$("#payment_method2").show();
+				} else {
+					$("input[name='form.payment_method']").val("0");
+					$("#payment_method1").hide();
+					$("#payment_method2").hide();
+				}
+			});
+			//sxt 20220923 add end
+		});
+		
+		//sxt 20221025 add start
+		function setItemState(isReadOnly,index){
+			if (isReadOnly){
+				$("input[name='form.stockDetailModelList_update[" + index +"].price_per'").attr("readonly","true");
+				$("input[name='form.stockDetailModelList_update[" + index +"].price_per'").attr("style","background-color:#fff");
+				$("input[name='form.stockDetailModelList_update[" + index +"].price_per'").val("");
+				
+				$("input[name='form.stockDetailModelList_update[" + index +"].quantity'").attr("readonly","true");
+				$("input[name='form.stockDetailModelList_update[" + index +"].quantity'").attr("style","background-color:#fff");
+				$("input[name='form.stockDetailModelList_update[" + index +"].quantity'").val("");
+				
+				$("input[name='form.stockDetailModelList_update[" + index +"].more_price'").attr("readonly","true");
+				$("input[name='form.stockDetailModelList_update[" + index +"].more_price'").attr("style","background-color:#fff");
+				$("input[name='form.stockDetailModelList_update[" + index +"].more_price'").val("");
+				
+				$("input[name='form.stockDetailModelList_update[" + index +"].less_price'").attr("readonly","true");
+				$("input[name='form.stockDetailModelList_update[" + index +"].less_price'").attr("style","background-color:#fff");
+				$("input[name='form.stockDetailModelList_update[" + index +"].less_price'").val("");
+				
+				$("input[name='form.stockDetailModelList_update[" + index +"].calculate_amount'").attr("readonly","true");
+				$("input[name='form.stockDetailModelList_update[" + index +"].calculate_amount'").attr("style","background-color:#fff");
+				$("input[name='form.stockDetailModelList_update[" + index +"].calculate_amount'").val("");
+				
+				$("input[name='form.stockDetailModelList_update[" + index +"].carfare'").attr("readonly","true");
+				$("input[name='form.stockDetailModelList_update[" + index +"].carfare'").attr("style","background-color:#fff");
+				$("input[name='form.stockDetailModelList_update[" + index +"].carfare'").val("");
+				
+			} else {
+				$("input[name='form.stockDetailModelList_update[" + index +"].price_per'").removeAttr("readonly");
+				$("input[name='form.stockDetailModelList_update[" + index +"].price_per'").removeAttr("style");
+				
+				$("input[name='form.stockDetailModelList_update[" + index +"].quantity'").removeAttr("readonly");
+				$("input[name='form.stockDetailModelList_update[" + index +"].quantity'").removeAttr("style");
+				
+				$("input[name='form.stockDetailModelList_update[" + index +"].more_price'").removeAttr("readonly");
+				$("input[name='form.stockDetailModelList_update[" + index +"].more_price'").removeAttr("style");
+				
+				$("input[name='form.stockDetailModelList_update[" + index +"].less_price'").removeAttr("readonly");
+				$("input[name='form.stockDetailModelList_update[" + index +"].less_price'").removeAttr("style");
+				
+				$("input[name='form.stockDetailModelList_update[" + index +"].calculate_amount'").removeAttr("readonly");
+				$("input[name='form.stockDetailModelList_update[" + index +"].calculate_amount'").removeAttr("style");
+				
+				$("input[name='form.stockDetailModelList_update[" + index +"].carfare'").removeAttr("readonly");
+				$("input[name='form.stockDetailModelList_update[" + index +"].carfare'").removeAttr("style");
+			}
+		}
+		//sxt 20221025 add end
+		
+		//精算額を計算
+		function setCalculateAmount(index){
+			//月を選択する時
+			if ($("select[name='form.stockDetailModelList_update[" + index +"].time_kbn'").val() == "01"){		
+				
+				//月間作業基準時間from
+				var work_time_from = parseFloat($("input[name='form.work_time_from'").val());
+				//月間作業基準時間to
+				var work_time_to = parseFloat($("input[name='form.work_time_to'").val());
+									
+				//稼働時間
+				var quantity = 0;
+				if ($("input[name='form.stockDetailModelList_update[" + index +"].quantity'").val()){
+					quantity = parseFloat($("input[name='form.stockDetailModelList_update[" + index +"].quantity'").val());
+				}
+												
+				//契約単価
+				var price = 0;
+				if ($("input[name='form.stockDetailModelList_update[" + index +"].price_per'").val()){
+					price = parseFloat($("input[name='form.stockDetailModelList_update[" + index +"].price_per'").val());
+				}
+								
+				//精算額
+				var calculateAmount = 0;
+				//超過料金を計算
+				if (quantity > work_time_to) {
+					//超過単価
+					//var morePrice = price / work_time_to;
+					var morePrice = parseFloat($("input[name='form.stockDetailModelList_update[" + index +"].more_price'").val());
+						
+					//超過料金
+					calculateAmount = (quantity - work_time_to) * morePrice;
+				}
+				
+				//控除金額を計算
+				if (quantity < work_time_from) {
+					//控除単価
+					//var lessPrice = price / work_time_from;
+					var lessPrice = parseFloat($("input[name='form.stockDetailModelList_update[" + index +"].less_price'").val());
+						
+					//控除金額
+					calculateAmount = (quantity - work_time_from) * lessPrice;
+				}
+																			
+				//端数処理
+				calculateAmount = doProcessing(calculateAmount);
+		
+				if (calculateAmount != 0) {
+					$("input[name='form.stockDetailModelList_update[" + index +"].calculate_amount'").val(calculateAmount);	
+				} else {
+					$("input[name='form.stockDetailModelList_update[" + index +"].calculate_amount'").val("");	
+				}
+
+			} else if ($("select[name='form.stockDetailModelList_update[" + index +"].time_kbn'").val() == "02"){		
+				$("input[name='form.stockDetailModelList_update[" + index +"].calculate_amount'").val("");
+			}
+		}
+		
+		//金額を計算
+		function setAmount(index){
+			
+			//金額
+			var amount;
+			//契約単価
+			var price = 0;
+			if ($("input[name='form.stockDetailModelList_update[" + index +"].price_per'").val()){
+				price = parseFloat($("input[name='form.stockDetailModelList_update[" + index +"].price_per'").val());
+			}
+			
+			//精算額
+			var calculateAmount = 0;
+			if ($("input[name='form.stockDetailModelList_update[" + index +"].calculate_amount'").val()){
+				calculateAmount = parseFloat($("input[name='form.stockDetailModelList_update[" + index +"].calculate_amount'").val());
+			}
+
+			//稼働時間
+			var quantity = 0;
+			if ($("input[name='form.stockDetailModelList_update[" + index +"].quantity'").val()){
+				quantity = parseFloat($("input[name='form.stockDetailModelList_update[" + index +"].quantity'").val());
+			}
+				
+			//そのた
+			var otherPrice = 0;
+			if ($("input[name='form.stockDetailModelList_update[" + index +"].other_price'").val()){
+				otherPrice = parseFloat($("input[name='form.stockDetailModelList_update[" + index +"].other_price'").val());
+			}
+							
+			//月を選択する時
+			if ($("select[name='form.stockDetailModelList_update[" + index +"].time_kbn'").val() == "01"){		
+				//月：金額＝　契約単価　＋　精算額　＋　そのた
+				amount = price + calculateAmount + otherPrice;
+									
+			//時を選択する時
+			}　else if ($("select[name='form.stockDetailModelList_update[" + index +"].time_kbn'").val() == "02"){
+				//時：金額＝　契約単価X稼働時間　＋　そのた
+				amount = price * quantity + otherPrice;
+				
+				//端数処理
+				amount = doProcessing(amount);
+			}
+			
+			if (amount != 0) {
+				$("input[name='form.stockDetailModelList_update[" + index +"].amount'").val(amount);	
+			} else {
+				$("input[name='form.stockDetailModelList_update[" + index +"].amount'").val("");	
+			}
+			
+			//合計金額計算
+			calculateTotal();
+		}
+		
+		//精算額をセットする
+		function setPriceAttr(index){
+			//月を選択する時
+			if ($("select[name='form.stockDetailModelList_update[" + index +"].time_kbn'").val() == "01"){		
+				
+				$("input[name='form.stockDetailModelList_update[" + index +"].more_price'").removeAttr("readonly");
+				$("input[name='form.stockDetailModelList_update[" + index +"].more_price'").removeAttr("style");
+				
+				$("input[name='form.stockDetailModelList_update[" + index +"].less_price'").removeAttr("readonly");
+				$("input[name='form.stockDetailModelList_update[" + index +"].less_price'").removeAttr("style");
+				
+				$("input[name='form.stockDetailModelList_update[" + index +"].calculate_amount'").removeAttr("readonly");
+				$("input[name='form.stockDetailModelList_update[" + index +"].calculate_amount'").removeAttr("style");
+
+			//時を選択する時
+			}　else if ($("select[name='form.stockDetailModelList_update[" + index +"].time_kbn'").val() == "02"){
+				
+				$("input[name='form.stockDetailModelList_update[" + index +"].more_price'").attr("readonly","true");
+				$("input[name='form.stockDetailModelList_update[" + index +"].more_price'").attr("style","background-color:#fff");
+
+				$("input[name='form.stockDetailModelList_update[" + index +"].less_price'").attr("readonly","true");
+				$("input[name='form.stockDetailModelList_update[" + index +"].less_price'").attr("style","background-color:#fff");
+				
+				$("input[name='form.stockDetailModelList_update[" + index +"].calculate_amount'").attr("readonly","true");
+				$("input[name='form.stockDetailModelList_update[" + index +"].calculate_amount'").attr("style","background-color:#fff");
+				
+				//精算額空白に
+				$("input[name='form.stockDetailModelList_update[" + index +"].more_price'").val("");
+				$("input[name='form.stockDetailModelList_update[" + index +"].less_price'").val("");
+				$("input[name='form.stockDetailModelList_update[" + index +"].calculate_amount'").val("");
+			}
+		}
+		
+		//获取当前索引
+		function getCurIndex(x){
+			//获取索引值
+			var start = x.indexOf("[");
+			var end = x.indexOf("]");
+			return  parseInt(x.substr(start+1,end-start-1));
+		}
+		
+		//端数処理
+		function doProcessing( amount ) {
+			//端数処理
+			var processing = $("input[name='form.fraction_processing_update'").val();
+			
+			//01=切り捨て、02=四捨五入、03=切り上げ
+			switch (processing) {
+			case "01":
+				amount = Math.floor(amount);
+				break;
+			case "02":
+				amount = Math.round(amount);
+				break;
+			case "03":
+				amount = Math.ceil(amount);
+				break;
+			}
+			
+			return amount;
+		}
+		    
+		function doSomething(){
+
+		}
+		
+		//合計金額計算
+		function calculateTotal(){
+			
+			//画面.消費税率
+			var tax_rate = $("input[name='form.consume_tax_rate_update'").val();
+			
+			//内税金額合計
+			var innerProfit = 0;
+			//外税金額合計
+			var outterProfit = 0;
+			//非課税等の金額合計
+			var otherProfit = 0;
+			//消費税率＝画面.消費税率/100
+			var profit = parseFloat(tax_rate) / 100; 
+						
+			//内税税抜金額
+			var innerNoProfit = 0;
+			//外税税抜金額
+			var outterNoProfit = 0;
+			//非課税等の税抜金額
+			var otherNoProfit = 0;
+			//交通費合計
+			var carfareTotal = 0;
+			
+			var detailsize =  parseInt($("#detailsize").val());
+						
+			for (var i = 0; i < detailsize; i++) {
+				
+				//明細金額
+				var amountDetail = 0; ;	
+				if ($("input[name='form.stockDetailModelList_update[" + i +"].amount'").val()) {
+					amountDetail = parseInt($("input[name='form.stockDetailModelList_update[" + i +"].amount'").val());
+				} 
+				
+				//明細交通費
+				var carfareDetail = 0; ;	
+				if ($("input[name='form.stockDetailModelList_update[" + i +"].carfare'").val()) {
+					carfareDetail = parseInt($("input[name='form.stockDetailModelList_update[" + i +"].carfare'").val());
+				} 
+				
+				//明細税区分
+				var tax_div = $("select[name='form.stockDetailModelList_update[" + i +"].tax_div'").val();
+				
+				//明細税区分未选择的场合，按外税（02）计算
+				if (!tax_div) tax_div = "02";
+				
+				if (tax_div == "01") {
+					//内税金額合計：税区分が内税の明細行の金額合計
+					innerProfit += amountDetail;
+				} else if (tax_div == "02") {
+					//外税金額合計：税区分が外税の明細行の金額合計
+					outterProfit += amountDetail;
+				} else {
+					//非課税等の金額合計：税区分が外税と内税以外の明細行の金額合計
+					otherProfit += amountDetail;
+				}
+				
+				//交通費合計
+				carfareTotal += carfareDetail;
+			}
+			
+			//内税消費税合計
+			var innerTaxProfit = 0;
+			//外税消費税合計
+			var outterTaxProfit = 0;
+			//非課税消費税合計
+			var otherTaxProfit = 0;
+						
+			//内税消費税合計：内税金額合計/(1+消費税率)×消費税率 端数処理は「切り捨て」です。
+			innerTaxProfit = Math.floor(innerProfit * profit / (1 + profit));
+			
+			//外税消費税合計：外税金額合計×消費税率 端数処理は得意先マスタ.端数処理です。
+			outterTaxProfit = doProcessing(outterProfit * profit);
+			
+			//消費税合計
+			var tax_amount = innerTaxProfit + outterTaxProfit + otherTaxProfit;		
+			
+// 			if(tax_amount < -999999999999||tax_amount > 999999999999){
+// 				alert("消費税がオーバーです。");
+// 			}
+			
+			//内税税抜金額：内税金額合計 - 内税消費税合計 
+			innerNoProfit = innerProfit - innerTaxProfit;
+			//外税税抜金額：外税金額合計
+			outterNoProfit = outterProfit;
+			//非課税等の税抜金額：非課税等の金額合計
+			otherNoProfit = otherProfit;
+			//合計
+			var amount = innerNoProfit + outterNoProfit + otherNoProfit;
+			
+// 			if(amount < -999999999999||amount > 999999999999){
+// 				alert("合計がオーバーです。");
+// 			}else{
+// 				$("#stock_quantity_sum").text("￥" + amount.toLocaleString());
+// 				$("#stock_consume_tax_sum").text("￥" + tax_amount.toLocaleString());
+// 				$("#carfare").text("￥" + carfareTotal.toLocaleString());
+// 				$("#stock_quantity_tax_sum").text("￥" + (amount + tax_amount).toLocaleString());				
+// 			}	
+			
+			$("#stock_quantity_sum").text("￥" + amount.toLocaleString());
+			$("#stock_consume_tax_sum").text("￥" + tax_amount.toLocaleString());
+			$("#carfare").text("￥" + carfareTotal.toLocaleString());
+			$("#stock_quantity_tax_sum").text("￥" + (amount + tax_amount).toLocaleString());	
+		}
+	</script>
+</html>
