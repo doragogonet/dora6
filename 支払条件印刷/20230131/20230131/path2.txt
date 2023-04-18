@@ -1,0 +1,6 @@
+/var/www/hanbai/Sales62/WEB-INF/classes/cn/com/edic/hanbai/hattyu/
+SaveSinkiHattyuManager.class
+SaveUpdateHattyuManager.class
+
+/var/www/hanbai/Sales62/WEB-INF/classes/cn/com/edic/hanbai/report/reportModel/
+ReportFormsCreate.class
